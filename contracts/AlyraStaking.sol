@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity 0.8.9;
 pragma experimental ABIEncoderV2;
 
-import "@OpenZeppelin/contracts/access/Ownable.sol";
 import "@OpenZeppelin/contracts/token/ERC20/ERC20.sol";
 import "@OpenZeppelin/contracts/token/ERC20/IERC20.sol";
 import "@OpenZeppelin/contracts/utils/math/SafeMath.sol";
 
-contract AlyraStaking is Ownable {
+
+contract StakingTokens {
     using SafeMath for uint;
    
     // Constants
@@ -26,58 +26,50 @@ contract AlyraStaking is Ownable {
         uint totalReward;
     }
     
-    // will allow to define the couple owner (msg.sender) + token (address)
-    // to get a kind of unique identifier to map the below array
-    struct OwnedToken {
-        address tokenOwner;
-        address tokenAddress;
-    }
-   
-    // will contain all the staked tokens and for each we will have the full list of stake/widthdraw movements
+    // will contain all the staked tokens and for each stakeholder we will have the full list of stake/widthdraw movements
     TokenInfo[] ERC20Tokens;
-   
-    // the mapping will map OwnedToken to get its corresponding index in ERC20Tokens array
-    mapping(OwnedToken => uint) ERC20map;
-   
-    // to be planned = event for each function
+    
+    // the mapping will map token address to get its corresponding index in ERC20Tokens array
+    mapping(address => uint) ERC20TokenMap;
+    
+    event AmountStaked(uint stakedAmount, uint totalAmount); // ok used in registerProposal function 
    
     function calculateReward (TokenInfo memory _tokenInfo) private view returns (uint){
         return _tokenInfo.totalAmount.mul(block.timestamp.sub(_tokenInfo.lastReferenceDate)).mul(STAKING_RATE).div(STAKING_PERIODICITY);
     }
-   
 
     /// @notice Stake an amount of a specific ERC20 token
     /// @dev 
     /// @param _tokenAddress address of the staked token
     /// @param _amount staked amount
     function stake(address _tokenAddress, uint _amount) public payable {
-        // TODO require = check that msg.balance enough
-        // TODO require = check that msg.sender should not be the owner / address 0
-        
         // first check that given address is an ERC20 one.
         IERC20 tokenContract = IERC20(_tokenAddress);
+        
+        uint newTotalAmount = _amount; // default value for first call
+        uint newTotalReward = 0; // default value for first call
        
-        // check if the struct msg.sender + token Address already exists in the mappings,
-        // if not consider a new AmountEntry
-        OwnedToken ownedToken = OwnedToken({tokenOwner: msg.sender, tokenAddress: _tokenAddress});
-        if (ERC20map[ownedToken] == 0) {
+        // check if the token Address already exists in the ERC20TokenMap of msg.sender
+        if (ERC20TokenMap[_tokenAddress] == 0) {
             ERC20Tokens.push(TokenInfo(block.timestamp, _amount, 0));
-            ERC20map[ownedToken] = ERC20Tokens.length; // careful = we need to keep/use 1 as reference base to keep test on 0 means not already listed
+            ERC20TokenMap[_tokenAddress] = ERC20Tokens.length; // careful = we need to keep/use 1 as reference base to keep test on 0 means not already listed
         }
         else {
-            TokenInfo storage tokenInfo = ERC20Tokens[ERC20map[ownedToken]-1];
+            TokenInfo storage tokenInfo = ERC20Tokens[ERC20TokenMap[_tokenAddress]-1];
+            // calculate reward based on previous amount and previous date and update it 
+            tokenInfo.totalReward.add(calculateReward (tokenInfo));
+            newTotalReward = tokenInfo.totalReward;
             // update totalAmount with previous totalAmount + _amount
             tokenInfo.totalAmount.add(_amount);
+            newTotalAmount = tokenInfo.totalAmount;
             // update lastReferenceDate
             tokenInfo.lastReferenceDate = block.timestamp;
-            // calculate reward based on previous date and update it 
-            tokenInfo.totalReward.add(calculateReward (tokenInfo));
         }
        
         // transfer amount
         tokenContract.transferFrom(msg.sender, address(this), _amount);
-       
-        // emit AmountStaked;
+
+        emit AmountStaked(_amount, newTotalAmount);
     }
     
     /// @notice Withdraw an amount of a specific ERC20 token
@@ -88,13 +80,15 @@ contract AlyraStaking is Ownable {
         // first check that given address is an ERC20 one.
         IERC20 tokenContract = IERC20(_tokenAddress);
        
-        OwnedToken ownedToken = OwnedToken({tokenOwner: msg.sender, tokenAddress: _tokenAddress});
-
-        // require = check requested amount is available, not higher than what has been staked
-        require(ERC20map[ownedToken] > 0 && ERC20Tokens[ERC20map[ownedToken]-1].totalAmount >= _amount, "Not enough staked tokens.");
-        // TODO require = check that msg.sender should not be the owner / address 0
+        // the token should also be registered for the sender
+        require(ERC20TokenMap[_tokenAddress] > 0, "Seems you never staked the given token on this contract");
+        
+        // from here we can instanciate the tokenInfo
+        TokenInfo storage tokenInfo = ERC20Tokens[ERC20TokenMap[_tokenAddress]-1];
+        
+        // check requested amount is available, not higher than what has been staked
+        require(tokenInfo.totalAmount >= _amount, "Not enough staked tokens.");
       
-        TokenInfo storage tokenInfo = ERC20Tokens[ERC20map[ownedToken]-1];
         // calculate reward based on previous date and update it 
         tokenInfo.totalReward.add(calculateReward (tokenInfo));
         // update totalAmount with previous totalAmount - _amount
@@ -105,4 +99,61 @@ contract AlyraStaking is Ownable {
         // transfer amount back
         tokenContract.transfer(msg.sender, _amount);
     }
+    
+    function getTokenAmount (address _tokenAddress) public view returns (uint) {
+        // the token should also be registered for the sender
+        require(ERC20TokenMap[_tokenAddress] > 0, "Seems you never staked the given token on this contract");
+        
+        // from here we can instanciate the tokenInfo
+        TokenInfo storage tokenInfo = ERC20Tokens[ERC20TokenMap[_tokenAddress]-1];
+        return tokenInfo.totalAmount;
+    }
+    
+    function getTokenReward (address _tokenAddress) public view returns (uint) {
+        // the token should also be registered for the sender
+        require(ERC20TokenMap[_tokenAddress] > 0, "Seems you never staked the given token on this contract");
+        
+        // from here we can instanciate the tokenInfo
+        TokenInfo storage tokenInfo = ERC20Tokens[ERC20TokenMap[_tokenAddress]-1];
+        return tokenInfo.totalReward;
+    }
+    
+    //TODO continue function getRewardInformation () public { 
+} // end Contract StakingTokens
+
+
+/*
+contract AlyraStaking {
+    using SafeMath for uint;
+   
+    // the mapping will map stakeholder addresss to its corresponding contract
+    mapping(address => StakingTokens) StakingTokensPerOwnerMap;
+   
+    function getStakingTokensContract () private returns (StakingTokens) {
+        if (StakingTokensPerOwnerMap[msg.sender] == new StakingTokens()) {
+            StakingTokensPerOwnerMap[msg.sender] = new StakingTokens();
+        }
+        return StakingTokensPerOwnerMap[msg.sender];
+    }
+
+    /// @notice Stake an amount of a specific ERC20 token
+    /// @dev 
+    /// @param _tokenAddress address of the staked token
+    /// @param _amount staked amount
+    function stake(address _tokenAddress, uint _amount) public payable {
+        // call owner contract stake function
+        getStakingTokensContract().stake(_tokenAddress, _amount);
+    }
+    
+    /// @notice Withdraw an amount of a specific ERC20 token
+    /// @dev 
+    /// @param _tokenAddress address of the staked token
+    /// @param _amount amount to be withdrawn
+    function withdraw (address _tokenAddress, uint _amount) public {
+        // call owner contract withdraw function
+        getStakingTokensContract().withdraw(_tokenAddress, _amount);
+    }
+    
+    //TODO continue function getRewardInformation () public { 
 }
+*/

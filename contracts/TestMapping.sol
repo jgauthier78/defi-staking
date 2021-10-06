@@ -6,20 +6,20 @@ contract TestMapping {
     mapping(string=> uint) CagnotteMap;
     
     function AjoutCagnotte (string calldata _nom, uint _montant) public {
-        uint arrayIndex = CagnotteMap[_nom];
-        if (Cagnottes.length == 0 || arrayIndex == 0) {
+        int arrayIndex = int(CagnotteMap[_nom]) - 1;
+        if (arrayIndex == -1) {
             Cagnottes.push(_montant);
             CagnotteMap[_nom] = Cagnottes.length;
         }
         else {
-            Cagnottes[arrayIndex-1] = Cagnottes[arrayIndex-1] + _montant;
+            Cagnottes[uint(arrayIndex)] = Cagnottes[uint(arrayIndex)] + _montant;
         }
     }
     
     function GetMontantCagnotte (string calldata _nom) public view returns (uint) {
-        uint arrayIndex = CagnotteMap[_nom];
+        int arrayIndex = int(CagnotteMap[_nom]) - 1;
         if (arrayIndex > 0) {
-            return Cagnottes[arrayIndex-1];
+            return Cagnottes[uint(arrayIndex)];
         }
         else {
             return 0;

@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.9;
  
+import "@OpenZeppelin/contracts/utils/math/SafeMath.sol";
+
+
 contract TestMapping {
+    using SafeMath for uint;
+
     struct Cagnotte {
         string nom;
         uint montant;
@@ -19,6 +24,7 @@ contract TestMapping {
         else {
             Cagnotte storage currentCagnotte = Cagnottes[uint(arrayIndex)];
             currentCagnotte.montant = currentCagnotte.montant + _montant;
+            // currentCagnotte.montant.add(_montant); ne fonctionne pas
         }
     }
     

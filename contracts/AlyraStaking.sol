@@ -3,11 +3,9 @@ pragma solidity 0.8.9;
  
 import "@OpenZeppelin/contracts/token/ERC20/ERC20.sol";
 import "@OpenZeppelin/contracts/token/ERC20/IERC20.sol";
-import "@OpenZeppelin/contracts/utils/math/SafeMath.sol";
 
 
 contract AlyraStaking {
-    using SafeMath for uint;
    
     // Constants
     uint constant STAKING_RATE = 6;
@@ -21,35 +19,45 @@ contract AlyraStaking {
     // - totalReward = reward expressed in same ERC20 token. Will be converted to "real" reward token later on, when owner wants to withdraw some
     struct Token {
         address TokenAddress;
-        uint LastReferenceDate;
         uint StakedAmount;
-        uint Reward;
+        uint PreviousStakedAmountPerSecond;
+        uint LastReferenceDate;
     }
     Token[] Tokens;
     mapping(address => uint) TokenMap;
     
+    function getNewStakedAmountPerSecond (Token memory _token) private view returns (uint){
+        return _token.PreviousStakedAmountPerSecond + ((block.timestamp - _token.LastReferenceDate) * _token.StakedAmount);
+    }
+
     /// @notice calculate reward based on _token parameter
     /// @dev simple calculation based on prorata
     /// @param _token struct containing the necessary information (amount and LastReferenceDate)
     /// @return an uint
     function calculateReward (Token memory _token) private view returns (uint){
-        return _token.StakedAmount.mul(block.timestamp.sub(_token.LastReferenceDate)).mul(STAKING_RATE).div(STAKING_PERIODICITY);
+        return (getNewStakedAmountPerSecond(_token) * STAKING_RATE) / (STAKING_PERIODICITY * 100);
+        // uint elapsedTimeInSeconds = block.timestamp - token.lastReferenceDate;
+        // uint elapsedTimeInStakingPeriodicity = elapsedTimeInSeconds / STAKING_PERIODICITY;
+        // return (elapsedTimeInStakingPeriodicity * STAKING_RATE * token.totalStakedAmount) / 100;
     }
-
+    
     /// @notice Stake an amount of a specific ERC20 token
     /// @dev reward calculation is done before applying the new amount to the total
     /// @param _tokenAddress address of the staked token
     /// @param _amount staked amount
     function StakeToken (address _tokenAddress, uint _amount) public {
+        require(_amount > 0, "You cannot stake 0 token");
+
         int arrayIndex = int(TokenMap[_tokenAddress]) - 1;
         if (arrayIndex == -1) {
-            Tokens.push(Token(_tokenAddress, block.timestamp, _amount, 0));
+            Tokens.push(Token(_tokenAddress, _amount, 0, block.timestamp));
             TokenMap[_tokenAddress] = Tokens.length;
         }
         else {
             Token storage currentToken = Tokens[uint(arrayIndex)];
-            currentToken.LastReferenceDate = block.timestamp;
+            currentToken.PreviousStakedAmountPerSecond = getNewStakedAmountPerSecond(currentToken);
             currentToken.StakedAmount = currentToken.StakedAmount + _amount;
+            currentToken.LastReferenceDate = block.timestamp;
         }
 
         // transfer amount from stakeholder to the contract
@@ -68,7 +76,7 @@ contract AlyraStaking {
         Token storage currentToken = Tokens[uint(arrayIndex)];
         require(currentToken.StakedAmount >= _amount, "Not enough staked tokens.");
         
-        currentToken.Reward.add(calculateReward (currentToken));
+        currentToken.PreviousStakedAmountPerSecond = getNewStakedAmountPerSecond(currentToken);
         currentToken.LastReferenceDate = block.timestamp;
         currentToken.StakedAmount = currentToken.StakedAmount - _amount;
 
@@ -92,7 +100,7 @@ contract AlyraStaking {
             return 0;
         }
         else {
-            return Tokens[uint(arrayIndex)].Reward;
+            return calculateReward(Tokens[uint(arrayIndex)]);
         }
     }
 }

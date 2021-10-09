@@ -84,7 +84,7 @@ contract AlyraStaking {
     /// @notice indicate the total staked amount of a given token 
     /// @param tokenAddress address of the staked token
     /// @return an uint
-    function gettokenstakedAmount (address tokenAddress) public view returns (uint) {
+    function getTokenStakedAmount (address tokenAddress) public view returns (uint) {
         int arrayIndex = int(tokenMap[tokenAddress]) - 1;
         if (arrayIndex == -1) {
             return 0;

@@ -27,7 +27,7 @@ contract AlyraStaking {
     Token[] private tokens;
     mapping(address => uint) private tokenMap;
     
-    PriceConsumerV3 priceConsumerV3 = new PriceConsumerV3();
+    PriceConsumerV3 private priceConsumerV3 = new PriceConsumerV3();
     
     /// @notice calculate staked amount per second
     /// @param token struct containing the necessary information

@@ -11,7 +11,7 @@ contract AlyraStaking {
     uint private constant STAKING_RATE = 6;
     // define here what the rate refers to. Usually it would be a year = 52 weeks in solidity
     // but for test purpose it can be easier to use shorter period like a minute
-    uint private constant STAKING_PERIODICITY = 1 minutes;
+    uint private constant STAKING_PERIODICITY = 1 days;
        
     // will store an entry information
     // - lastTransactionDate: last date to use for calculation
@@ -37,7 +37,7 @@ contract AlyraStaking {
     /// @param token struct containing the necessary information
     /// @return an uint
     function calculateReward (Token memory token) private view returns (uint){
-        return (getNewStakedAmountPerSecond(token) * STAKING_RATE) / (STAKING_PERIODICITY * 100);
+        return ((getNewStakedAmountPerSecond(token) * STAKING_RATE) / STAKING_PERIODICITY) / 100;
     }
     
     /// @notice Stake an amount of a specific ERC20 token

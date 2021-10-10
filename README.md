@@ -1,6 +1,6 @@
-#Défi Staking
+# Défi Staking
 
-##Enoncé
+## Enoncé
 
 Pour mettre en pratique ce concept vous allez devoir construire une Dapp qui permet aux utilisateurs de stake (immobiliser) n'importe quel token ERC20 et d'automatiser l'émission de récompenses aux stakers (fournisseurs de liquidité) sous la forme de tokens. 
 
@@ -8,7 +8,7 @@ La récompense en tokens reçues par les utilisateurs est un élément très imp
 
 L'obtention de données de prix à partir de Chainlink vous offre un moyen de comparer la valeur des tokens bloqués sur le smart contract. Vous pouvez facilement convertir la valeur de n'importe quel token ERC20 en sa valeur ETH afin de calculer et déterminer la valeur exacte de la récompense.
 
-##Les spécifications fonctionnelles
+## Les spécifications fonctionnelles
 
 - Stake son token ERC20 -> **fonction stakeToken**
 - Unstake ses tokens -> **fonction withdrawToken**
@@ -18,4 +18,4 @@ L'obtention de données de prix à partir de Chainlink vous offre un moyen de co
 Les exigences :
 Utilisation de l’oracle Chainlink -> **PriceConsumerV3**
 
-Veuillez indiquer le lien de votre répertoire Github correspondant au défi ->** https://github.com/jgauthier78/defi-staking**
+Veuillez indiquer le lien de votre répertoire Github correspondant au défi -> ** https://github.com/jgauthier78/defi-staking**

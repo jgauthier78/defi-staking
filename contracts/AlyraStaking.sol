@@ -11,13 +11,13 @@ contract AlyraStaking {
     // Constants
     uint private constant STAKING_RATE = 6;
     // define here what the rate refers to. Usually it would be a year = 52 weeks in solidity
-    // but for test purpose it can be easier to use shorter period like a minute
+    // but for test purpose it can be easier to use shorter period like one day
     uint private constant STAKING_PERIODICITY = 1 days;
        
     // will store an entry information
-    // - lastTransactionDate: last date to use for calculation
     // - stakedAmount = sum of staked amount less sum of withdrawn amounts
-    // - totalReward = reward expressed in same ERC20 token. Will be converted to "real" reward token later on, when owner wants to withdraw some
+    // - previousStakedAmountPerSecond = necessary to calculate reward without the need to keep a sub-array per token
+    // - lastTransactionDate: last date to use for calculation
     struct Token {
         address tokenAddress;
         uint stakedAmount;

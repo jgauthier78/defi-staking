@@ -3,6 +3,7 @@ pragma solidity 0.8.9;
  
 import "@OpenZeppelin/contracts/token/ERC20/ERC20.sol";
 import "@OpenZeppelin/contracts/token/ERC20/IERC20.sol";
+import "./PriceConsumerV3.sol";
 
 
 contract AlyraStaking {
@@ -25,6 +26,8 @@ contract AlyraStaking {
     }
     Token[] private tokens;
     mapping(address => uint) private tokenMap;
+    
+    PriceConsumerV3 priceConsumerV3 = new PriceConsumerV3();
     
     /// @notice calculate staked amount per second
     /// @param token struct containing the necessary information
@@ -105,5 +108,65 @@ contract AlyraStaking {
         else {
             return calculateReward(tokens[uint(arrayIndex)]);
         }
+    }
+    
+    /// @notice factory to give chainlink data feed address for Rinkeby testnet
+    /// @param sourceTokenSymbol symbol of the token
+    /// @return an address
+    function getDataFeedAddressToETH (string memory sourceTokenSymbol) private pure returns (address) {
+        if(keccak256(bytes(sourceTokenSymbol)) == keccak256(bytes("BTC"))) {
+            return address(0xc751E86208F0F8aF2d5CD0e29716cA7AD98B5eF5);
+        }
+        else if(keccak256(bytes(sourceTokenSymbol)) == keccak256(bytes("DAI"))) {
+            return address(0x74825DbC8BF76CC4e9494d0ecB210f676Efa001D);
+        }
+        else if(keccak256(bytes(sourceTokenSymbol)) == keccak256(bytes("USDC"))) {
+            return address(0xdCA36F27cbC4E38aE16C4E9f99D39b42337F6dcf);
+        }
+        else {
+            return address(0);
+        }
+    }
+    
+    /// @notice return the corresponding Rinkeby chainlink price for a token
+    /// @dev note: for test purpose it also returns 10 for AT1 and 20 for AT2 tokens
+    /// @param tokenAddress address of the staked token
+    /// @return an uint
+    function getTokenPrice (address tokenAddress) public view returns (int) {
+        try ERC20(tokenAddress).symbol() returns (string memory tokenSymbol) {
+            address datafeedAddress = getDataFeedAddressToETH(tokenSymbol);
+            if (datafeedAddress == address(0)) {
+                if (keccak256(bytes(tokenSymbol)) == keccak256(bytes("AT1"))) {
+                    return 10;
+                }
+                else if (keccak256(bytes(tokenSymbol)) == keccak256(bytes("AT2"))) {
+                    return 20;
+                }
+                else {
+                    return 0;
+                }
+            }
+            else {
+                try priceConsumerV3.getLatestPrice(tokenAddress) returns (int price) {
+                    return price;
+                } catch {
+                    return 0;
+                }
+            }
+        }
+        catch {
+            return 0;
+        }
+    }
+    
+    /// @notice return the total stake reward price in ETH
+    /// @return an uint
+    function getAllTokensRewardsInETH () public view returns (uint) {
+        uint totalRewardsInETH;
+        for (uint tokenCounter=0; tokenCounter<tokens.length; tokenCounter++) {
+            Token storage currentToken = tokens[tokenCounter];
+            totalRewardsInETH = totalRewardsInETH + (calculateReward(currentToken) * uint(getTokenPrice(currentToken.tokenAddress)));
+        }
+        return totalRewardsInETH;
     }
 }

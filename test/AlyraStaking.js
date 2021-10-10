@@ -47,10 +47,10 @@ contract("AlyraStaking", accounts => {
   it("...total staked amount should be 1000", async function () {
     const stakedAmount1 = 600;
     const stakedAmount2 = 400;
-    const withdrawnAmount = 300
+    const withdrawnAmount = 1000
     let totalAmount = stakedAmount1 + stakedAmount2 - withdrawnAmount;
     
-    // first approve amount to AlyraStaking contract address first
+    // first approve amount to AlyraStaking contract address
     await this.ERC20TokenAT1Instance.approve(this.AlyraStakingInstance.address, stakedAmount1 + stakedAmount2, { from: tokensOwner });
     // call AlyraStakingInstance.stakeToken first with stakedAmount1
     await this.AlyraStakingInstance.stakeToken(this.ERC20TokenAT1Instance.address, stakedAmount1, { from: tokensOwner });
@@ -64,7 +64,7 @@ contract("AlyraStaking", accounts => {
   });
 
   it("...should reject withdraw if requested amount is higher than staked tokens", async function () {
-    const withdrawnAmountRequested = 1001;
+    const withdrawnAmountRequested = 1;
     
     await truffleAssert.reverts(this.AlyraStakingInstance.withdrawToken(this.ERC20TokenAT1Instance.address, withdrawnAmountRequested, { from: tokensOwner }), "Not enough staked tokens.");
   });
@@ -145,7 +145,56 @@ contract("AlyraStaking", accounts => {
     ////////////////////////////
     // End fourth assertion   //
     ////////////////////////////
+    
+  });
+  
+  it("...should return the correct Tokens Rewards In ETH", async function () {
+    // now check All Tokens Rewards In ETH
+    let expectedTokensRewardsInETH = 720 * 20; // 20 = price of AT2 token, 720 comes from previous test
+    let allTokensRewardsInETH = await this.AlyraStakingInstance.getAllTokensRewardsInETH({ from: tokensOwner });
+    // assert
+    assert.equal(allTokensRewardsInETH, expectedTokensRewardsInETH, "All Tokens Rewards price in ETH should be " + expectedTokensRewardsInETH + " and is " + allTokensRewardsInETH);
 
+  });
+  
+
+  it("...can stake different tokens without mixing them", async function () {
+    const stakedAT1Amount1 = 600;
+    const stakedAT1Amount2 = 400;
+    const withdrawnAT1Amount = 300
+    let totalAT1Amount = stakedAT1Amount1 + stakedAT1Amount2 - withdrawnAT1Amount;
+
+    const stakedAT2Amount1 = 1000;
+    const withdrawnAT2Amount = 900
+    const stakedAT2Amount2 = 500;
+    let totalAT2Amount = stakedAT2Amount1 - withdrawnAT2Amount + stakedAT2Amount2;
+    
+    // first approve AT1 and AT2 amounts to AlyraStaking contract address
+    await this.ERC20TokenAT1Instance.approve(this.AlyraStakingInstance.address, stakedAT1Amount1 + stakedAT1Amount2, { from: tokensOwner });
+    await this.ERC20TokenAT2Instance.approve(this.AlyraStakingInstance.address, stakedAT2Amount1 + stakedAT2Amount2, { from: tokensOwner });
+
+    // we should be able to stake.withdrawn AT1 and AT2 tokens in "mix mode"
+    // call AlyraStakingInstance.stakeToken first with stakedAT1Amount1
+    await this.AlyraStakingInstance.stakeToken(this.ERC20TokenAT1Instance.address, stakedAT1Amount1, { from: tokensOwner });
+    // call AlyraStakingInstance.stakeToken second time with stakedAT1Amount2
+    await this.AlyraStakingInstance.stakeToken(this.ERC20TokenAT1Instance.address, stakedAT1Amount2, { from: tokensOwner });
+    // call AlyraStakingInstance.stakeToken first with stakedAT2Amount1
+    await this.AlyraStakingInstance.stakeToken(this.ERC20TokenAT2Instance.address, stakedAT2Amount1, { from: tokensOwner });
+    // call AlyraStakingInstance.withdrawToken with withdrawnAT1Amount
+    await this.AlyraStakingInstance.withdrawToken(this.ERC20TokenAT1Instance.address, withdrawnAT1Amount, { from: tokensOwner });
+    // call AlyraStakingInstance.withdrawToken with withdrawnAT2Amount
+    await this.AlyraStakingInstance.withdrawToken(this.ERC20TokenAT2Instance.address, withdrawnAT2Amount, { from: tokensOwner });
+    // total staked amount should be equal to totalAmount
+    // call AlyraStakingInstance.stakeToken first with stakedAT2Amount2
+    await this.AlyraStakingInstance.stakeToken(this.ERC20TokenAT2Instance.address, stakedAT2Amount2, { from: tokensOwner });
+    
+    // assert AT1 staked amount = totalAT1Amount
+    const tokenStakedAT1Amount = await this.AlyraStakingInstance.getTokenStakedAmount(this.ERC20TokenAT1Instance.address, { from: tokensOwner });
+    assert.equal(tokenStakedAT1Amount, totalAT1Amount, "Total staked AT1 should be " + totalAT1Amount + " and is " + tokenStakedAT1Amount);
+
+    // assert AT2 staked amount = totalAT1Amount
+    const tokenStakedAT2Amount = await this.AlyraStakingInstance.getTokenStakedAmount(this.ERC20TokenAT2Instance.address, { from: tokensOwner });
+    assert.equal(tokenStakedAT2Amount, totalAT2Amount, "Total staked AT2 should be " + totalAT2Amount + " and is " + tokenStakedAT2Amount);
   });
 
 });

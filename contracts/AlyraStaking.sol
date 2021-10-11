@@ -57,7 +57,7 @@ contract AlyraStaking {
         else {
             Token storage currentToken = tokens[uint(arrayIndex)];
             currentToken.previousStakedAmountPerSecond = getNewStakedAmountPerSecond(currentToken);
-            currentToken.stakedAmount = currentToken.stakedAmount + amount;
+            currentToken.stakedAmount += amount;
             currentToken.lastTransactionDate = block.timestamp;
         }
 
@@ -70,6 +70,8 @@ contract AlyraStaking {
     /// @param tokenAddress address of the staked token
     /// @param amount amount to be withdrawn
     function withdrawToken (address tokenAddress, uint amount) public {
+        require(amount > 0, "You cannot withdraw 0 token");
+
         int arrayIndex = int(tokenMap[tokenAddress]) - 1;
         require(arrayIndex > -1, "Seems you never staked the given token on this contract");
         
@@ -78,7 +80,7 @@ contract AlyraStaking {
         
         currentToken.previousStakedAmountPerSecond = getNewStakedAmountPerSecond(currentToken);
         currentToken.lastTransactionDate = block.timestamp;
-        currentToken.stakedAmount = currentToken.stakedAmount - amount;
+        currentToken.stakedAmount -= amount;
 
         // transfer amount back to stakeholder
         IERC20(tokenAddress).transfer(msg.sender, amount);
@@ -165,7 +167,7 @@ contract AlyraStaking {
         uint totalRewardsInETH;
         for (uint tokenCounter=0; tokenCounter<tokens.length; tokenCounter++) {
             Token storage currentToken = tokens[tokenCounter];
-            totalRewardsInETH = totalRewardsInETH + (calculateReward(currentToken) * uint(getTokenPrice(currentToken.tokenAddress)));
+            totalRewardsInETH += calculateReward(currentToken) * uint(getTokenPrice(currentToken.tokenAddress));
         }
         return totalRewardsInETH;
     }

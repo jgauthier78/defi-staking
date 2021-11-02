@@ -9,10 +9,10 @@ import "./PriceConsumerV3.sol";
 contract AlyraStaking {
    
     // Constants
-    uint private constant STAKING_RATE = 6;
+    uint public constant STAKING_RATE = 6;
     // define here what the rate refers to. Usually it would be a year = 52 weeks in solidity
     // but for test purpose it can be easier to use shorter period like one day
-    uint private constant STAKING_PERIODICITY = 1 days;
+    uint public constant STAKING_PERIODICITY = 1 days;
        
     // will store an entry information
     // - stakedAmount = sum of staked amount less sum of withdrawn amounts
@@ -24,8 +24,8 @@ contract AlyraStaking {
         uint previousStakedAmountPerSecond;
         uint lastTransactionDate;
     }
-    Token[] private tokens;
-    mapping(address => uint) private tokenMap;
+    Token[] public tokens;
+    mapping(address => uint) public tokenMap;
     
     PriceConsumerV3 private priceConsumerV3 = new PriceConsumerV3();
     
@@ -43,6 +43,18 @@ contract AlyraStaking {
         return ((getNewStakedAmountPerSecond(token) * STAKING_RATE) / STAKING_PERIODICITY) / 100;
     }
     
+    function GetStakingRate () public view returns (uint) {
+        return STAKING_RATE;
+    }
+
+    function GetStakingPeriodicity () public view returns (uint) {
+        return STAKING_PERIODICITY;
+    }
+    
+    function GetStakedTokens () public view returns (Token[] memory) {
+        return tokens;
+    }
+
     /// @notice Stake an amount of a specific ERC20 token
     /// @param tokenAddress address of the staked token
     /// @param amount staked amount
